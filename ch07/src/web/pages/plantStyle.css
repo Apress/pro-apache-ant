@@ -1,0 +1,75 @@
+.menu-main {
+  color: #000000;
+  background-color: #FFFFFF;
+  margin: 3px 5px 5px 3px;
+  font-size: large;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+}
+
+.menu-sub {
+  color: #000000;
+  background-color: #FFFFFF;
+  margin: 3px 5px 5px 3px;
+  font-size: medium;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+}
+
+.footer {
+  color: #000000;
+  background-color: #FFFFFF;
+}
+
+h1 {
+  color: #000000;
+  background-color: #FFFFFF;
+  margin: 3px 5px 5px 3px;
+  font-size: large;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+}
+
+.letters {
+  color: #000000;
+  background-color: #FFFFFF;
+  margin: 3px 5px 5px 3px;
+  font-size: medium;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+}
+
+.center {
+  text-align: center
+}
+
+tr.template {
+  height: 500px
+}
+
+td.template {
+  width: 200px
+}
+
+tr.resultRow {
+  height: 250px
+}
+
+p.left { 
+  text-align: left
+}
+
+p {
+  color: #000000;
+  background-color: #FFFFFF;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif
+}
+
+.italic {
+  color: #000000;
+  background-color: #FFFFFF;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+  font-style: italic
+}
+
+.results {
+  color: #000000;
+  background-color: #FFFFFF;
+  font-family:  Arial, Verdana,Helvetica, Sans-Serif;
+}

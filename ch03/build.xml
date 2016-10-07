@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+
+<project name="Apache Ant Properties Project" basedir=".">
+
+  <target name="properties.built-in">
+    <echo message="The base directory: ${basedir}"/>      
+    <echo message="This file: ${ant.file}"/>
+    <echo message="Ant version: ${ant.version}"/> 
+    <echo message="Project name: ${ant.project.name}"/>     
+    <echo message="Java version: ${ant.java.version}"/>     
+  </target>
+
+  <target name="build.path">
+    <echo message="File: ${basedir}${file.separator}build.xml"/>
+    <echo message="Path: ${basedir}${file.separator}build.xml${path.separator}${basedir}${file.separator}build.properties"/>
+  </target>
+
+  <target name="build.path.unix">
+    <echo message="File: ${basedir}/build.xml"/>
+    <echo message="Path: ${basedir}/build.xml;${basedir}/build.properties"/>
+  </target> 
+
+<!--
+  <target name="properties.custom">
+    <property name="build.no" value="1.1"/>
+    <echo message="Build no. = ${build.no}"/>
+  </target>
+-->
+
+<!--
+  <target name="properties.custom">
+    <property name="fs" value="${file.separator}"/>
+    <property name="ps" value="${path.separator}"/>
+
+    <echo message="File: ${basedir}${fs}build.xml"/>
+    <echo message="Path: ${basedir}${fs}build.xml${ps}${basedir}${fs}build.properties"/>
+  </target>
+-->
+
+<!--
+  <target name="properties.custom">
+    <property name="project.dtd" location="project.dtd"/>
+    <echo message="Location of project.dtd: ${project.dtd}"/>
+  </target>
+-->
+
+  <target name="properties.custom">
+    <!-- Windows users should leave this line uncommented -->
+    <property name="build.path" 
+              value="${basedir}/build.xml:${basedir}/build.properties"/>
+
+    <!-- Unix users should remove the above line 
+         and uncomment the below line -->
+    <!--
+    <property name="build.path" 
+              value="${basedir}\build.xml;${basedir}\build.properties"/>
+    -->
+
+    <path id="build.path.id">  
+      <pathelement path="${build.path}"/>
+    </path>
+
+    <property name="build.path.property" refid="build.path.id"/>
+
+    <!-- The converted string that Ant uses as a path -->
+    <echo message="Converted string: ${build.path.property}"/>
+
+    <!-- The unconverted string, which Ant treats as a string -->
+    <echo message="Path: ${build.path}"/>
+  </target>
+
+  <target name="properties.environment">
+    <property environment="env"/>
+    <echo message="Built on: ${env.OS} ${env.PROCESSOR_ARCHITECTURE}"/>
+    <echo message="ANT_HOME: ${env.ant_home}"/>
+  </target>
+
+  <target name="properties.localfile">
+
+    <property file="build.properties"/>
+    
+    <path id="build.classpath.id">
+      <pathelement path="${build.classpath}"/>
+    </path>
+
+    <property name="build.classpath.property" refid="build.classpath.id"/>
+
+    <echo message="Server URL: ${server.url}"/>
+    <echo message="Build classpath: ${build.classpath}"/>
+    <echo message="Build classpath converted: ${build.classpath.property}"/>
+  </target>
+
+  <target name="properties.localfile.prefix">
+
+    <property file="build.properties" prefix="imported"/>
+
+    <path id="build.classpath.id">
+      <pathelement path="${imported.build.classpath}"/>
+    </path>
+
+    <property name="build.classpath.property" refid="build.classpath.id"/>
+
+    <echo message="Server URL: ${imported.server.url}"/>
+    <echo message="Build classpath: ${imported.build.classpath}"/>
+    <echo message="Build classpath converted: ${build.classpath.property}"/>
+  </target>
+
+  <target name="properties.resourcefile">
+
+    <!--
+    <property resource="build.res.properties" classpath="./lib"/>
+    -->
+
+    <property resource="build.res.properties">
+      <classpath path="./lib"/>
+    </property>
+
+    <path id="build.classpath.id">
+      <pathelement path="${build.classpath}"/>
+    </path>
+
+    <property name="build.classpath.property" refid="build.classpath.id"/>
+
+    <echo message="Server URL: ${server.url}"/>
+    <echo message="Build classpath: ${build.classpath}"/>
+    <echo message="Build classpath converted: ${build.classpath.property}"/>
+  </target>
+
+  <target name="properties.url">
+
+    <property url="http://localhost:8080/antBook/properties/build.properties"/>
+
+    <path id="build.classpath.id">
+      <pathelement path="${build.classpath}"/>
+    </path>
+
+    <property name="build.classpath.property" refid="build.classpath.id"/>
+
+    <echo message="Server URL: ${server.url}"/>
+    <echo message="Build classpath: ${build.classpath}"/>
+    <echo message="Build classpath converted: ${build.classpath.property}"/>
+  </target>
+
+  <property file="build.properties"/>
+  <property file="build.properties.default"/>
+  <property name="property.example" value="Global"/>
+
+  <target name="print-global">
+    <echo message="In print-global"/>
+    <echo message="The value of property.example is: ${property.example}"/>
+  </target>
+
+  <target name="print-target" depends="print-global">
+    <property name="property.example" value="Target"/>
+
+    <echo message="In print-target"/>
+    <echo message="The value of property.example is: ${property.example}"/>
+  </target>
+
+  <target name="print-file" depends="print-target">
+    <property name="property.file.example" value="build.xml"/>
+
+    <echo message="In print-file"/>
+    <echo>
+      The value of property.file.example is: ${property.file.example}
+    </echo>
+  </target>
+
+  <fileset dir="." id="uptodate.id">
+    <include name="src/jstl/One.java"/>
+  </fileset>
+
+  <property name="jstl.src" value="jstl"/>
+  <property name="jstl.jar" value="jstl.jar"/>  
+  
+  <condition property="jstl.src.exists">
+    <available file="${jstl.src}" filepath="./src"/>
+  </condition>
+
+  <condition property="jstl.jar.exists">
+    <available file="${jstl.jar}" filepath="./lib"/>
+  </condition>
+
+  <condition property="uptodate">
+    <uptodate>
+      <srcfiles refid="uptodate.id"/>
+      <mapper type="merge" to="./One.java"/>
+    </uptodate>
+  </condition>
+
+  <target name="checkout-jstl" unless="jstl.src.exists">
+    <echo message="Checking out ${jstl.jar}"/>
+  </target>
+
+  <target name="build-jstl" depends="checkout-jstl" unless="jstl.jar.exists">
+    <echo message="Building ${jstl.jar}"/>
+  </target>
+
+  <target name="compile" if="uptodate">
+    <echo message="File changed: ${uptodate}"/>
+  </target>
+
+  <condition property="is.windows">
+    <os family="windows"/>
+  </condition>
+
+  <condition property="is.unix">
+    <os family="unix"/>
+  </condition>
+
+  <target name="do-windows" if="is.windows">
+    <echo message="This is Windows"/>
+  </target>
+
+  <target name="do-unix" if="is.unix">
+    <echo message="This is Unix"/>
+  </target>
+
+ <condition property="is.fileset">
+    <isreference refid="uptodate.id" type="fileset"/>
+  </condition>
+
+  <target name="fileset-prepare">
+    <echo message="Value of is.fileset = ${is.fileset}"/>
+  </target>
+
+</project>

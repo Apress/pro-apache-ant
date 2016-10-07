@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<antlib>
+
+  <!-- ################################# -->
+  <!-- The custom tasks for the Ant book -->
+  <!-- ################################# -->
+
+  <!-- The first two demonstrate the life cycle of a task -->
+  <taskdef name="lifecycle-task" classname="org.mwrm.ant.tasks.LifeCycleTask" />
+  <taskdef name="lifecycle-nested-task" classname="org.mwrm.ant.tasks.LifeCycleNestedTask" />
+
+  <!-- Extends the <javadoc> task -->
+  <!-- It checks source file modification times against target file modifications -->
+  <taskdef name="ext-javadoc" classname="org.mwrm.ant.tasks.ExtendJavadocTask" />
+
+  <!-- Demonstrates converting parameters -->
+  <taskdef name="class-set-test" classname="org.mwrm.ant.tasks.ClassSetTask" />
+
+  <!-- Displays usage informaton generated from a build file -->
+  <taskdef name="projecthelp" classname="org.mwrm.ant.tasks.ProjectHelpTask" />
+
+</antlib>

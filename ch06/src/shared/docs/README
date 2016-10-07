@@ -1,0 +1,4 @@
+Each chapter's build file adds to the previous chapter's. 
+
+Therefore, by Chapter 12, the build file contains all the targets and tasks
+from the whole book.

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+
+<project name="MySQL Connector Build" 
+         default="build-mysql-connector" basedir=".">
+
+  <!-- CVSROOT for the MySQL connector -->
+  <property name="mysql.cvsroot" 
+            value=":pserver:anonymous@cvs.sourceforge.net:/cvsroot/mmmysql" />
+
+  <!-- Update or check out required sources from CVS for the MySQL connector -->
+  <target name="checkout-mysql-connector" 
+          description="Update or check out required sources from CVS 
+                       for the MySQL connector">
+
+    <echo message="Checking out the required sources from CVS 
+                   for the MySQL connector" />
+
+    <cvs cvsroot="${mysql.cvsroot}" quiet="true"
+         command="checkout" package="${mysql.build}"
+         dest="${build}" compression="true" />
+  </target>
+
+  <!-- Build the MySQL connector from source -->
+  <target name="build-mysql-connector" depends="checkout-mysql-connector"
+          description="Build the MySQL connector from source">
+    <echo message="Building the MySQL connector from source"/>
+
+    <!-- The MySQL connector file needs this directory to exist -->
+    <!-- Therefore we need to create it -->
+    <mkdir dir="${build}/dist-mysql-jdbc"/>
+
+    <ant antfile="build.xml" dir="${build}/${mysql.build}"/>
+
+    <copy tofile="${mysql.jar}">
+      <fileset dir="${build}/build-mysql-jdbc">
+        <include name="mysql-connector*/*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+</project >

@@ -1,0 +1,288 @@
+<?xml version="1.0"?>
+
+<project name="Example Application Build" default="build-both" basedir=".">
+  
+  <property file="build.properties"/>
+
+  <!-- CVSROOT for the JSTL -->
+  <property name="cvsroot" 
+            value=":pserver:anoncvs@cvs.apache.org:/home/cvspublic" />
+
+  <!-- CVSROOT for the MySQL connector -->
+  <property name="mysql.cvsroot" 
+            value=":pserver:anonymous@cvs.sourceforge.net:/cvsroot/mmmysql" />
+
+  <!-- ################################### -->
+  <!-- The master build classpath          --> 
+  <!-- ################################### -->
+
+  <path id="build.classpath">
+    <pathelement location="${servlet24.jar}"/>
+    <pathelement location="${jsp20.jar}"/>
+    <pathelement location="${mysql.jar}"/>
+    <pathelement path="${appName.jar}"/>
+  </path>
+
+  <!-- ################################### -->
+  <!-- Initialization target               --> 
+  <!-- ################################### -->
+
+  <!-- Create the working directories -->
+  <target name="dir" description="Create the working directories">
+    <echo message="Creating the working directories"/>
+    <mkdir dir="${build.stand-alone.root}"/>
+    <mkdir dir="${build.web.classes}"/>
+    <mkdir dir="${dist}"/>
+    <mkdir dir="${lib}"/>
+  </target>
+
+  <!-- #################################################### -->
+  <!-- CVS and build tasks for the JSTL and MySQL connector -->
+  <!-- #################################################### -->
+
+  <!-- Update or check out required sources from CVS for the JSTL -->
+  <target name="checkout-jstl" depends="dir" 
+          description="Update or check out required sources
+                       from CVS for the JSTL">
+
+    <echo message="Checking out the required JSTL sources from CVS"/>
+
+    <cvs cvsroot="${cvsroot}" quiet="true"
+         command="checkout -P ${jstl.build}" 
+         dest="${build}" compression="true" />
+
+  </target>
+  <!-- Update or check out required sources from CVS for the MySQL connector -->
+  <target name="checkout-mysql-connector" depends="dir" 
+          description="Update or check out required sources
+          from CVS for the MySQL connector">
+
+    <echo message="Checking out the required sources from CVS for the MySQL connector" />
+
+    <cvs cvsroot="${mysql.cvsroot}" quiet="true"
+         command="checkout" package="${mysql.build}"
+         dest="${build}" compression="true" />
+
+  </target>
+
+  <!-- Build the JSTL from source -->
+  <target name="build-jstl" depends="checkout-jstl" 
+          description="Build the JSTL from source">
+    <echo message="Building the JSTL from source"/>
+
+    <ant antfile="build.xml" dir="${build}/${jstl.build}"/>
+
+    <copy todir="${lib}">
+      <fileset dir="${build}/${jstl.build}/${build}/lib">
+        <include name="*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- Build the MySQL connector from source -->
+  <target name="build-mysql-connector" depends="checkout-mysql-connector" 
+          description="Build the MySQL connector from source">
+    <echo message="Building the MySQL connector from source"/>
+
+    <!-- The MySQL connector file needs this directory to exist -->
+    <!-- Therefore we need to create it -->
+    <mkdir dir="${build}/dist-mysql-jdbc"/>
+
+    <ant antfile="build.xml" dir="${build}/${mysql.build}"/>
+
+    <copy tofile="${mysql.jar}">
+      <fileset dir="${build}/build-mysql-jdbc">
+        <include name="mysql-connector*/*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+
+  <!-- ########################### -->
+  <!-- The stand-alone application -->
+  <!-- ########################### -->
+
+  <!-- Compile the stand-alone application -->
+  <target name="compile-stand-alone" depends="dir" 
+          description="Compile stand-alone application">
+    <echo message="Compiling the stand-alone application"/>
+    <javac srcdir="${src.shared.java}" destdir="${build.stand-alone.root}"/>
+    <javac srcdir="${src.stand-alone.java}" 
+           destdir="${build.stand-alone.root}"/>  
+  </target>
+
+<!--
+  <target name="stand-alone-complete" 
+          description="Compile stand-alone application, 
+          using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+    <antcall target="build-mysql-connector"/>
+    <antcall target="package-stand-alone"/>
+  </target>
+
+  <target name="stand-alone-complete" 
+          depends="build-mysql-connector, package-stand-alone" 
+          description="Compile stand-alone application, 
+          using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+  </target> 
+-->
+
+  <target name="stand-alone-complete" 
+          depends="build-mysql-connector, package-stand-alone" 
+          description="Compile stand-alone application, 
+                       using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+  </target>
+
+  <!-- Package the stand-alone application -->
+  <target name="package-stand-alone" depends="compile-stand-alone" 
+          description="Package the stand-alone application">
+    <echo message="Creating the stand-alone JAR file"/>
+    <copy file="${database.properties}" todir="${build.stand-alone.root}"/>
+    <jar destfile="${appName.jar}" basedir="${build.stand-alone.root}"/>
+  </target>
+
+  <!-- ########################### -->
+  <!-- The web application         -->
+  <!-- ########################### -->
+
+  <!-- Compile the web application -->
+  <target name="compile-web" depends="dir" description="Compile web application">
+    <echo message="Compiling the web application"/>
+    <javac destdir="${build.web.classes}">
+      <src path="${src.shared.java}"/>
+    </javac>
+    <javac srcdir="${src.web.java}" destdir="${build.web.classes}">
+      <classpath refid="build.classpath"/>
+    </javac>
+  </target>
+
+<!--
+  <target name="web-complete" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling web application, using CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="build-mysql-connector"/>
+    <antcall target="build-jstl"/>
+    <antcall target="package-web"/>
+  </target>
+
+  <target name="web-complete" 
+          depends="build-mysql-connector, build-jstl, package-web" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled web application, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+-->
+
+  <target name="web-complete" 
+          depends="build-mysql-connector, build-jstl, package-web" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling web application, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <!-- Copy the web pages and configuration files -->
+  <target name="copy-web" depends="compile-web" description="Copy the web files">
+    <echo message="Copying the web pages and configuration files"/>
+    <copy todir="${build.web.root}">
+      <fileset dir="${src.web.pages}"/>
+    </copy>
+    <!-- Copy the tags -->
+    <copy todir="${build.web.tags}">
+      <fileset dir="${src.web.tags}"/>
+    </copy>
+    <copy todir="${build.web.web-inf}">
+      <fileset dir="${src.web.conf}">
+        <include name="*.tld"/>
+      </fileset>
+    </copy>
+    <!-- Copy the JAR files -->
+    <copy todir="${build.web.lib}">
+      <fileset dir="${lib}"/>
+    </copy>
+    <!-- Copy the properties file -->
+    <copy file="${database.properties}" todir="${build.web.classes}"/>
+    <!-- No need to copy web.xml, as the WAR task does this for us -->
+  </target>
+
+  <!-- Build the WAR file -->
+  <target name="package-web" depends="copy-web" description="Build the WAR">
+    <echo message="Building the WAR file"/> 
+    <war destfile="${appName.war}" basedir="${build.web.root}" 
+         webxml="${src.web.conf}/web.xml"/>
+  </target>
+
+
+  <!-- ######################################## -->
+  <!-- Targets that work with both applications -->
+  <!-- ######################################## -->
+
+<!--
+  <target name="build-both" 
+          description="Compile both applications, 
+                       without CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling both applications, without CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="package-stand-alone"/>
+    <antcall target="package-web"/>
+  </target>
+
+  <target name="build-all" 
+          description="Compile both applications, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling both applications, using CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="stand-alone-complete"/>
+    <antcall target="web-complete"/>
+  </target>
+-->
+
+  <target name="build-both" 
+          depends="package-stand-alone, package-web" 
+          description="Compile both applications, 
+                       without CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, without CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <target name="build-all" 
+          depends="stand-alone-complete, web-complete" 
+          description="Compile both applications, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+
+  <!-- ######################## -->
+  <!-- Download the servlet JAR -->
+  <!-- ######################## -->
+  
+  <!-- Download the servlet JAR -->
+  <target name="download-servlet-jar" depends="dir" 
+          description="Download the servlet JAR">
+    <echo message="Downloading the servlet JAR"/>
+
+    <get src="http://www.ibiblio.org/maven/servletapi/jars/servletapi-2.4.jar"
+         dest="${servlet24.jar}"
+         verbose="true"/>
+  </target>
+
+  <!-- ######################## -->
+  <!-- Download the JSP JAR     -->
+  <!-- ######################## -->
+  
+  <!-- Download the JSP JAR -->
+  <target name="download-jsp-jar" depends="dir" 
+          description="Download the JSP JAR">
+    <echo message="Downloading the JSP JAR"/>
+
+    <get src="http://www.ibiblio.org/maven/jspapi/jars/jsp-api-2.0.jar"
+         dest="${jsp20.jar}"
+         verbose="true"/>
+  </target>
+
+  <target name="clean" description="Clean up the working directories">
+    <echo message="Cleaning up"/>
+    <delete dir="${build}"/>
+  </target>
+
+</project>

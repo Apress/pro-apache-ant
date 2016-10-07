@@ -1,0 +1,358 @@
+<?xml version="1.0"?>
+
+<project name="Example Application Package Build" default="package-all" basedir=".">
+
+  <!-- ######################################## -->
+  <!-- Packaging the distribution               -->
+  <!-- ######################################## -->
+
+  <!-- Checking that the documentation is up to date -->
+  <target name="check-docs" description="Check that the documentation is up to date">
+    <echo message="Checking that the documentation is up to date"/>
+    <condition property="docs.notRequired">
+      <and>
+        <uptodate targetfile="${dist}/${appName}-${package.docs}.zip">
+          <srcfiles dir="${src}" includes="**"/>
+        </uptodate>
+        <uptodate targetfile="${dist}/${appName}-${package.docs}.tar.gz">
+          <srcfiles dir="${src}" includes="**"/>
+        </uptodate>
+      </and>
+    </condition>
+  </target>
+
+  <!-- Generate Javadocs for the application -->
+  <target name="javadocs" depends="check-docs" description="Generate Javadocs for the application" unless="docs.notRequired">
+    <echo message="Generating Javadocs for the application"/>
+    <javadoc destdir="${docs}/api" windowtitle="${javadoc.windowtitle}">
+      <fileset refid="javadoc"/>
+      <doctitle>
+        ${javadoc.doctitle}
+      </doctitle>
+      <classpath refid="build.classpath"/>
+      <link href="http://java.sun.com/j2se/${javadoc.j2se.version}/docs/api"/>  
+      <link href="http://java.sun.com/j2ee/${javadoc.j2ee.version}/docs/api"/> 
+    </javadoc>
+  </target>
+
+  <!-- Generate Javadocs for the application, using offline package-list files -->
+  <target name="javadocs-offline" depends="check-docs" description="Generate Javadocs for the application, using offline package-list files" unless="docs.notRequired">
+    <echo message="Generating Javadocs for the application"/>
+    <javadoc destdir="${docs}/api" windowtitle="${javadoc.windowtitle}">
+      <fileset refid="javadoc"/>
+      <doctitle>
+        ${javadoc.doctitle}
+      </doctitle>
+      <classpath refid="build.classpath"/>
+      <link href="http://java.sun.com/j2se/${javadoc.j2se.version}/docs/api" 
+            offline="true" packagelistLoc="${javadoc.j2se.offline}"/>  
+      <link href="http://java.sun.com/j2ee/${javadoc.j2ee.version}/docs/api"
+            offline="true" packagelistLoc="${javadoc.j2ee.offline}"/> 
+<!--
+      <link href="${javadoc.j2se.offline}" resolveLink="true"/>  
+      <link href="${javadoc.j2ee.offline}" resolveLink="true"/>
+-->
+    </javadoc>
+  </target>
+
+  <!-- Assemble the documentation -->
+  <target name="docs" depends="javadocs" description="Assemble the documentation" unless="docs.notRequired">
+    <echo message="Assembling the documentation"/>
+    <copy todir="${docs}">
+      <fileset dir="${src.shared.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+    <copy todir="${docs}/stand-alone">
+      <fileset dir="${src.stand-alone.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+    <copy todir="${docs}/web">
+      <fileset dir="${src.web.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Zip the distribution                     -->
+  <!-- ######################################## -->
+
+  <!-- Generate the hashes for a package -->
+  <target name="generate-hashes" description="Generate the hashes for a package">
+    <echo message="Generating the hashes for ${file}"/>
+    <checksum file="${dist}/${file}" forceOverwrite="true"/>
+    <checksum file="${dist}/${file}" forceOverwrite="true" algorithm="SHA1"/>
+
+    <!-- We want a fresh file -->
+    <delete failonerror="false">
+      <fileset dir="." includes="**/${file}.asc"/>
+    </delete>
+
+    <!-- PGP creates a temporary file if it fails, so we use the scratch directory -->
+    <exec executable="pgp" spawn="false" vmlauncher="false">
+      <arg value="+force"/>
+      <arg value="+batchmode"/>
+      <arg value="-s"/>
+      <arg value="-b"/>
+      <arg value="-o"/>
+      <arg value="${build}/${file}.asc"/>
+      <arg value="-z"/>
+      <arg value="${pgp.password}"/>
+      <arg value="${dist}/${file}"/>
+    </exec>
+
+    <!-- Copy the file to the distribution directory -->
+    <copy file="${build}/${file}.asc" todir="${dist}" failonerror="false"/>
+  </target>
+
+  <!-- Zip the documentation -->
+  <target name="zip-docs" depends="docs" description="Zip the documentation">
+    <echo message="Zipping the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.docs}.zip">
+      <!-- Include the documentation -->
+      <fileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </fileset>
+      <!-- Include the license and the README -->
+      <fileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </fileset>
+    </zip> 
+
+    <antcall target="generate-hashes">
+      <param name="file" value="${appName}-${package.docs}.zip"/>
+    </antcall>
+  </target>
+
+  <!-- Zip the source and documentation together -->
+  <target name="zip-src" depends="zip-docs" 
+          description="Zip the source and documentation together">
+    <echo message="Zipping the source and documentation together"/>
+    <zip destfile="${dist}/${appName}-src.zip">
+      <!-- Include the source code and the build files -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <fileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-src.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-src.zip" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary stand-alone distribution with the documentation -->
+  <target name="zip-bin-stand-alone" depends="zip-docs" description="Zip the binary stand-alone distribution with the documentation">
+    <echo message="Zipping the binary binary stand-alone distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.stand-alone}-bin.zip">
+      <!-- Include the documentation -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <!-- Include the binary JAR files -->
+      <zipfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </zipfileset>
+      <fileset dir=".">
+        <include name="${mysql.jar}"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.zip" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary web distribution with the documentation -->
+  <target name="zip-bin-web" depends="zip-docs" description="Zip the binary web distribution with the documentation">
+    <echo message="Zipping the binary web distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.web}-bin.zip">
+      <!-- Include the documentation -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <!-- Include the binary WAR files -->
+      <fileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-${package.web}-bin.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.zip" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary distribution with the documentation -->
+  <target name="zip-bin" depends="zip-bin-stand-alone,zip-bin-web" description="Zip the binary distribution with the documentation">
+    <echo message="Zipping the binary distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-bin.zip" duplicate="preserve" update="true">
+      <zipgroupfileset dir="${dist}" includes="*.zip"/>
+    </zip>
+    <checksum file="${dist}/${appName}-bin.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.zip" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary and source distributions -->
+  <target name="zip-all" depends="zip-src,zip-bin"
+          description="Zip the binary and source distributions">
+    <echo message="Zipped the binary and source distributions"/>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Tar and gz the distribution              -->
+  <!-- ######################################## -->
+
+  <!-- Tar the documentation -->
+  <target name="tar-docs" depends="docs" description="Tar the documentation">
+    <echo message="Tarring the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.docs}.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-${package.docs}.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.docs}.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the source and documentation together -->
+  <target name="tar-src" depends="tar-docs" description="Tar the documentation">
+    <echo message="Tarring the documentation"/>
+    <tar destfile="${dist}/${appName}-src.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the source code and the build files -->
+      <tarfileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-src.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-src.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+
+  <!-- Tar the binary stand-alone distribution with the documentation -->
+  <target name="tar-bin-stand-alone" depends="tar-docs" description="Tar the binary stand-alone distribution with the documentation">
+    <echo message="Tarring the binary stand-alone distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the binary JAR files -->
+      <tarfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </tarfileset>
+      <tarfileset dir=".">
+        <include name="${mysql.jar}"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary web distribution with the documentation -->
+  <target name="tar-bin-web" depends="tar-docs" description="Tar the binary web distribution with the documentation">
+    <echo message="Tarring the binary web distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.web}-bin.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the binary WAR files -->
+      <tarfileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary distribution with the documentation -->
+  <target name="tar-bin" depends="tar-bin-stand-alone,tar-bin-web" description="Tar the binary distribution with the documentation">
+    <echo message="Tarring the binary distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-bin.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the source code and the build files -->
+      <tarfileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </tarfileset>
+      <!-- Include the binary JAR files -->
+      <tarfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </tarfileset>
+      <tarfileset dir=".">
+        <include name="${mysql.jar}"/>
+      </tarfileset>
+      <!-- Include the binary WAR files -->
+      <tarfileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </tarfileset>
+    </tar>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary and source distributions -->
+  <target name="tar-all" depends="tar-src,tar-bin"
+          description="Tar the binary and source distributions">
+    <echo message="Tarred the binary and source distributions"/>
+  </target>
+
+  <!-- ################################################### -->
+  <!-- Tasks that use the zip files to construct tar files -->
+  <!-- ################################################### --> 
+
+  <!-- Tar the binary web distribution with the documentation -->
+  <target name="tar-bin-web-new" depends="tar-docs,zip-bin-web" 
+          description="Tar the binary web distribution with the documentation">
+    <echo message="Tarring the binary web distribution with the documentation"/>
+    <unzip src="${dist}/${appName}-${package.web}-bin.zip" dest="${tmp}/web"/>
+    <tar destfile="${dist}/${appName}-${package.web}-bin.tar.gz" 
+         compression="gzip">
+      <tarfileset dir="${tmp}/web"/>
+    </tar>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary distribution with the documentation -->
+  <target name="tar-bin-new" 
+          depends="zip-bin,tar-bin-stand-alone,tar-bin-web-new"
+          description="Tar the binary distribution with the documentation">
+    <echo message="Tarring the binary distribution with the documentation"/>
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${tmp}" includes="**"/>
+    </delete>
+    <unzip src="${dist}/${appName}-bin.zip" dest="${tmp}"/>
+    <tar destfile="${dist}/${appName}-bin.tar.gz" compression="gzip">
+      <tarfileset dir="${tmp}"/>
+    </tar>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Create all the packages -->
+  <target name="package-all" depends="zip-all,tar-all"
+          description="Create all the packages">
+    <echo message="Created all the packages"/>
+  </target>
+
+</project>

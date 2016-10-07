@@ -1,0 +1,1024 @@
+<?xml version="1.0"?>
+
+<project name="Example Application Build" default="build-both" basedir=".">
+  
+  <property file="build.properties"/>
+
+  <!-- CVSROOT for the JSTL -->
+  <property name="cvsroot" 
+            value=":pserver:anoncvs@cvs.apache.org:/home/cvspublic" />
+
+  <!-- CVSROOT for the MySQL connector -->
+  <property name="mysql.cvsroot" 
+            value=":pserver:anonymous@cvs.sourceforge.net:/cvsroot/mmmysql" />
+
+  <!-- ################################### -->
+  <!-- The master build classpath          --> 
+  <!-- ################################### -->
+
+  <path id="build.classpath">
+    <pathelement location="${servlet24.jar}"/>
+    <pathelement location="${jsp20.jar}"/>
+    <pathelement location="${mysql.jar}"/>
+    <pathelement path="${appName.jar}"/>
+  </path>
+
+  <!-- ################################### -->
+  <!-- Javadoc file sets                   --> 
+  <!-- ################################### -->
+
+  <fileset id="javadoc" dir="${src}">
+    <exclude name="*/conf/**"/>
+    <exclude name="*/docs/*"/>
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+  </fileset>  
+
+  <!-- ##################################################### -->
+  <!-- Properties and pattern sets for the packaging targets --> 
+  <!-- ##################################################### -->
+
+  <!-- The value of each property in this section is the setting -->
+  <!-- for the 'dir' attribute of file sets and tar file sets --> 
+
+  <!-- Property and pattern set for the documentation -->
+  <property name="docs.all.dir" value="${build}"/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="docs.all">
+    <include name="docs/**"/>
+  </patternset>
+
+  <!-- Property and pattern set for the license and README -->
+  <property name="docs.misc.dir" value="${src}/shared/docs"/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="docs.misc">
+    <include name="README"/>
+    <include name="LICENSE"/>
+  </patternset>
+  
+  <!-- Property and pattern set for the source, -->
+  <!-- build.xml, and build.properties -->
+  <property name="src.files.dir" value="."/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="src.files">
+    <include name="${src}/**"/>
+    <include name="build.*"/>
+  </patternset>
+
+  <!-- Pattern set for the binary JAR -->
+  <!-- Nothing else is needed because the directory that contains it -->
+  <!-- is already in the ${dist} property and it's used in a zip file set -->
+  <!-- as well as a tar file set --> 
+  <patternset id="bin.jar">
+    <include name="*.jar"/>
+  </patternset>
+
+  <!-- Pattern set for the binary WAR -->
+  <!-- Nothing else is needed because the directory that contains it -->
+  <!-- is already in the ${dist} property and it's used in a zip file set -->
+  <!-- as well as a tar file set --> 
+  <patternset id="bin.war">
+    <include name="*.war"/>
+  </patternset>
+
+  <!-- ################################### -->
+  <!-- Initialization target               --> 
+  <!-- ################################### -->
+
+  <!-- Create the working directories -->
+  <target name="dir" description="Create the working directories">
+    <echo message="Creating the working directories"/>
+    <mkdir dir="${build.stand-alone.root}"/>
+    <mkdir dir="${build.web.classes}"/>
+    <mkdir dir="${dist}"/>
+    <mkdir dir="${lib}"/>
+  </target>
+
+  <!-- #################################################### -->
+  <!-- CVS and build tasks for the JSTL and MySQL connector -->
+  <!-- #################################################### -->
+
+  <!-- Update or check out required sources from CVS for the JSTL -->
+  <target name="checkout-jstl" depends="dir" 
+          description="Update or check out required sources
+                       from CVS for the JSTL">
+
+    <echo message="Checking out the required JSTL sources from CVS"/>
+
+    <cvs cvsroot="${cvsroot}" quiet="true"
+         command="checkout -P ${jstl.build}" 
+         dest="${build}" compression="true" />
+
+  </target>
+  <!-- Update or check out required sources from CVS for the MySQL connector -->
+  <target name="checkout-mysql-connector" depends="dir" 
+          description="Update or check out required sources
+          from CVS for the MySQL connector">
+
+    <echo message="Checking out the required sources from CVS for the MySQL connector" />
+
+    <cvs cvsroot="${mysql.cvsroot}" quiet="true"
+         command="checkout" package="${mysql.build}"
+         dest="${build}" compression="true" />
+
+  </target>
+
+  <!-- Build the JSTL from source -->
+  <target name="build-jstl" depends="checkout-jstl" 
+          description="Build the JSTL from source">
+    <echo message="Building the JSTL from source"/>
+
+    <ant antfile="build.xml" dir="${build}/${jstl.build}"/>
+
+    <copy todir="${lib}">
+      <fileset dir="${build}/${jstl.build}/${build}/lib">
+        <include name="*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- Build the MySQL connector from source -->
+  <target name="build-mysql-connector" depends="checkout-mysql-connector" 
+          description="Build the MySQL connector from source">
+    <echo message="Building the MySQL connector from source"/>
+
+    <!-- The MySQL connector file needs this directory to exist -->
+    <!-- Therefore we need to create it -->
+    <mkdir dir="${build}/dist-mysql-jdbc"/>
+
+    <ant antfile="build.xml" dir="${build}/${mysql.build}"/>
+
+    <copy tofile="${mysql.jar}">
+      <fileset dir="${build}/build-mysql-jdbc">
+        <include name="mysql-connector*/*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+
+  <!-- ########################### -->
+  <!-- The stand-alone application -->
+  <!-- ########################### -->
+
+  <!-- Compile the stand-alone application -->
+  <target name="compile-stand-alone" depends="dir" 
+          description="Compile stand-alone application">
+    <echo message="Compiling the stand-alone application"/>
+    <javac srcdir="${src.shared.java}" destdir="${build.stand-alone.root}"/>
+    <javac srcdir="${src.stand-alone.java}" 
+           destdir="${build.stand-alone.root}"/>  
+  </target>
+
+<!--
+  <target name="stand-alone-complete" 
+          description="Compile stand-alone application, 
+          using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+    <antcall target="build-mysql-connector"/>
+    <antcall target="package-stand-alone"/>
+  </target>
+
+  <target name="stand-alone-complete" 
+          depends="build-mysql-connector, package-stand-alone" 
+          description="Compile stand-alone application, 
+          using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+  </target> 
+-->
+
+  <target name="stand-alone-complete" 
+          depends="build-mysql-connector, package-stand-alone" 
+          description="Compile stand-alone application, 
+                       using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+  </target>
+
+  <!-- Package the stand-alone application -->
+  <target name="package-stand-alone" depends="compile-stand-alone" 
+          description="Package the stand-alone application">
+    <echo message="Creating the stand-alone JAR file"/>
+    <copy file="${database.properties}" todir="${build.stand-alone.root}"/>
+    <jar destfile="${appName.jar}" basedir="${build.stand-alone.root}"/>
+  </target>
+
+  <!-- ########################### -->
+  <!-- The web application         -->
+  <!-- ########################### -->
+
+  <!-- Compile the web application -->
+  <target name="compile-web" depends="dir" description="Compile web application">
+    <echo message="Compiling the web application"/>
+    <javac destdir="${build.web.classes}">
+      <src path="${src.shared.java}"/>
+    </javac>
+    <javac srcdir="${src.web.java}" destdir="${build.web.classes}">
+      <classpath refid="build.classpath"/>
+    </javac>
+  </target>
+
+<!--
+  <target name="web-complete" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling web application, using CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="build-mysql-connector"/>
+    <antcall target="build-jstl"/>
+    <antcall target="package-web"/>
+  </target>
+
+  <target name="web-complete" 
+          depends="build-mysql-connector, build-jstl, package-web" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled web application, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+-->
+
+  <target name="web-complete" 
+          depends="build-mysql-connector, build-jstl, package-web" 
+          description="Compile web application, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling web application, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <!-- Copy the web pages and configuration files -->
+  <target name="copy-web" depends="compile-web" description="Copy the web files">
+    <echo message="Copying the web pages and configuration files"/>
+    <copy todir="${build.web.root}">
+      <fileset dir="${src.web.pages}"/>
+    </copy>
+    <!-- Copy the tags -->
+    <copy todir="${build.web.tags}">
+      <fileset dir="${src.web.tags}"/>
+    </copy>
+    <copy todir="${build.web.web-inf}">
+      <fileset dir="${src.web.conf}">
+        <include name="*.tld"/>
+      </fileset>
+    </copy>
+    <!-- Copy the JAR files -->
+    <copy todir="${build.web.lib}">
+      <fileset dir="${lib}"/>
+    </copy>
+    <!-- Copy the properties file -->
+    <copy file="${database.properties}" todir="${build.web.classes}"/>
+    <!-- No need to copy web.xml, as the WAR task does this for us -->
+  </target>
+
+  <!-- Build the WAR file -->
+<!--
+  <target name="package-web" depends="copy-web" description="Build the WAR">
+    <echo message="Building the WAR file"/> 
+    <war destfile="${appName.war}" basedir="${build.web.root}" 
+         webxml="${src.web.conf}/web.xml"/>
+  </target>
+-->
+
+  <!-- Build the WAR file in one step -->
+  <target name="package-web" depends="compile-web" 
+          description="Build the WAR file in one step">
+    <echo message="Building the WAR file in one step"/> 
+    <war destfile="${appName.war}" basedir="${src.web.pages}" 
+         webxml="${src.web.conf}/web.xml">
+      <lib dir="${lib}"/>
+      <classes dir="${build.web.root}"/>
+      <zipfileset dir="${src.web.tags}" prefix="WEB-INF/tags"/>
+      <zipfileset file="${database.properties}" prefix="WEB-INF/classes"/>
+      <zipfileset dir="${src.web.conf}" prefix="WEB-INF">
+        <include name="*.tld"/>
+      </zipfileset>
+    </war>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Targets that work with both applications -->
+  <!-- ######################################## -->
+
+<!--
+  <target name="build-both" 
+          description="Compile both applications, 
+                       without CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling both applications, without CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="package-stand-alone"/>
+    <antcall target="package-web"/>
+  </target>
+
+  <target name="build-all" 
+          description="Compile both applications, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiling both applications, using CVS versions of the MySQL connector and the JSTL"/>
+    <antcall target="stand-alone-complete"/>
+    <antcall target="web-complete"/>
+  </target>
+-->
+
+  <target name="build-both" 
+          depends="package-stand-alone, package-web" 
+          description="Compile both applications, 
+                       without CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, without CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <target name="build-all" 
+          depends="stand-alone-complete, web-complete" 
+          description="Compile both applications, 
+                       using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+
+  <!-- ######################## -->
+  <!-- Download the servlet JAR -->
+  <!-- ######################## -->
+  
+  <!-- Download the servlet JAR -->
+  <target name="download-servlet-jar" depends="dir" 
+          description="Download the servlet JAR">
+    <echo message="Downloading the servlet JAR"/>
+
+    <get src="http://www.ibiblio.org/maven/servletapi/jars/servletapi-2.4.jar"
+         dest="${servlet24.jar}"
+         verbose="true"/>
+  </target>
+
+  <!-- ######################## -->
+  <!-- Download the JSP JAR     -->
+  <!-- ######################## -->
+  
+  <!-- Download the JSP JAR -->
+  <target name="download-jsp-jar" depends="dir" 
+          description="Download the JSP JAR">
+    <echo message="Downloading the JSP JAR"/>
+
+    <get src="http://www.ibiblio.org/maven/jspapi/jars/jsp-api-2.0.jar"
+         dest="${jsp20.jar}"
+         verbose="true"/>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Building the documentation bundle        -->
+  <!-- ######################################## -->
+
+  <!-- Checking that the documentation is up to date -->
+  <target name="check-docs" 
+          description="Check that the documentation is up to date">
+    <echo message="Checking that the documentation is up to date"/>
+    <condition property="docs.notRequired">
+      <and>
+        <uptodate targetfile="${dist}/${appName}-${package.docs}.zip">
+          <srcfiles dir="${src}" includes="**"/>
+        </uptodate>
+        <uptodate targetfile="${dist}/${appName}-${package.docs}.tar.gz">
+          <srcfiles dir="${src}" includes="**"/>
+        </uptodate>
+      </and>
+    </condition>
+  </target>  
+
+  <!-- Generate Javadocs for the application -->
+  <target name="javadocs" depends="dir,check-docs" 
+          description="Generate Javadocs for the application" 
+          unless="docs.notRequired">
+    <echo message="Generating Javadocs for the application"/>
+    <javadoc destdir="${docs}/api" windowtitle="${javadoc.windowtitle}">
+      <fileset refid="javadoc"/>
+      <doctitle>
+        ${javadoc.doctitle}
+      </doctitle>
+      <classpath refid="build.classpath"/>
+      <link href="http://java.sun.com/j2se/${javadoc.j2se.version}/docs/api"/>  
+      <link href="http://java.sun.com/j2ee/${javadoc.j2ee.version}/docs/api"/> 
+    </javadoc>
+  </target>
+
+   <!-- Generate Javadocs for the application, 
+        using offline package-list files -->
+  <target name="javadocs-offline" depends="dir,check-docs"
+          description="Generate Javadocs for the application, 
+                       using offline package-list files"
+          unless="docs.notRequired">
+    <echo message="Generating Javadocs for the application, 
+                   using offline package-list files"/>
+    <javadoc destdir="${docs}/api" windowtitle="${javadoc.windowtitle}">
+      <fileset refid="javadoc"/>
+      <doctitle>
+        ${javadoc.doctitle}
+      </doctitle>
+      <classpath refid="build.classpath"/>
+<!--
+      <link href="http://java.sun.com/j2se/${javadoc.j2se.version}/docs/api" 
+            offline="true" packagelistLoc="${javadoc.j2se.offline}"/>  
+      <link href="http://java.sun.com/j2ee/${javadoc.j2ee.version}/docs/api"
+            offline="true" packagelistLoc="${javadoc.j2ee.offline}"/> 
+-->
+      <link href="${javadoc.j2se.offline}" resolveLink="true"/>  
+      <link href="${javadoc.j2ee.offline}" resolveLink="true"/> 
+    </javadoc>
+  </target>
+
+  <!-- Assemble the documentation -->
+  <target name="docs" depends="javadocs" 
+          description="Assemble the documentation" unless="docs.notRequired">
+    <echo message="Assembling the documentation"/>
+    <copy todir="${docs}">
+      <fileset dir="${src.shared.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+    <copy todir="${docs}/stand-alone">
+      <fileset dir="${src.stand-alone.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+    <copy todir="${docs}/web">
+      <fileset dir="${src.web.docs}">
+        <include name="*.html"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Zip the distribution                     -->
+  <!-- ######################################## -->
+
+  <!-- Generate the hashes for a package -->
+  <target name="generate-hashes" description="Generate the hashes for a package">
+    <echo message="Generating the hashes for ${file}"/>
+    <checksum file="${dist}/${file}" forceOverwrite="true"/>
+    <checksum file="${dist}/${file}" forceOverwrite="true" algorithm="SHA1"/>
+
+    <!-- We want a fresh file -->
+    <delete failonerror="false">
+      <fileset dir="." includes="**/${file}.asc"/>
+    </delete>
+
+    <!-- PGP creates a temporary file if it fails, 
+         so we use the scratch directory -->
+    <exec executable="pgp" spawn="false" vmlauncher="false">
+      <arg value="+force"/>
+      <arg value="+batchmode"/>
+      <arg value="-s"/>
+      <arg value="-b"/>
+      <arg value="-o"/>
+      <arg value="${build}/${file}.asc"/>
+      <arg value="-z"/>
+      <arg value="${pgp.password}"/>
+      <arg value="${dist}/${file}"/>
+    </exec>
+
+    <!-- Copy the file to the distribution directory -->
+    <copy file="${build}/${file}.asc" todir="${dist}" failonerror="false"/>
+  </target>
+
+  <!-- Zip the documentation -->
+  <target name="zip-docs" depends="docs" description="Zip the documentation">
+    <echo message="Zipping the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.docs}.zip">
+      <!-- Include the documentation -->
+      <fileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </fileset>
+      <!-- Include the license and the README -->
+      <fileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </fileset>
+    </zip> 
+
+    <antcall target="generate-hashes">
+      <param name="file" value="${appName}-${package.docs}.zip"/>
+    </antcall>
+  </target>
+
+  <!-- Zip the source and documentation together -->
+  <target name="zip-src" depends="zip-docs" 
+          description="Zip the source and documentation together">
+    <echo message="Zipping the source and documentation together"/>
+    <zip destfile="${dist}/${appName}-src.zip">
+      <!-- Include the source code and the build files -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <fileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-src.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-src.zip" forceOverwrite="true" 
+              algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary stand-alone distribution with the documentation -->
+  <target name="zip-bin-stand-alone" depends="package-stand-alone,zip-docs" 
+          description="Zip the binary stand-alone distribution 
+                       with the documentation">
+    <echo message="Zipping the binary stand-alone distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.stand-alone}-bin.zip">
+      <!-- Include the documentation -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <!-- Include the binary JAR files -->
+      <zipfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </zipfileset>
+      <fileset dir=".">
+        <include name="${mysql.jar}"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.zip" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.zip" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary web distribution with the documentation -->
+  <target name="zip-bin-web" depends="package-web,zip-docs" 
+          description="Zip the binary web distribution with the documentation">
+    <echo message="Zipping the binary web distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-${package.web}-bin.zip">
+      <!-- Include the documentation -->
+      <zipfileset src="${dist}/${appName}-${package.docs}.zip"/>
+      <!-- Include the binary WAR files -->
+      <fileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </fileset>
+    </zip> 
+    <checksum file="${dist}/${appName}-${package.web}-bin.zip" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.zip" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary distribution with the documentation -->
+  <target name="zip-bin" depends="zip-bin-stand-alone,zip-bin-web" 
+          description="Zip the binary distribution with the documentation">
+    <echo message="Zipping the binary distribution with the documentation"/>
+    <zip destfile="${dist}/${appName}-bin.zip" 
+         duplicate="preserve" update="true">
+      <zipgroupfileset dir="${dist}" includes="*.zip"/>
+    </zip>
+    <checksum file="${dist}/${appName}-bin.zip" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.zip" forceOverwrite="true" 
+              algorithm="SHA1"/>
+  </target>
+
+  <!-- Zip the binary and source distributions -->
+  <target name="zip-all" depends="zip-src,zip-bin" 
+          description="Zip the binary and source distributions">
+    <echo message="Zipped the binary and source distributions"/>
+  </target>
+
+  <!-- ######################################## -->
+  <!-- Tar and gz the distribution              -->
+  <!-- ######################################## -->
+
+  <!-- Tar the documentation -->
+  <target name="tar-docs" depends="docs" description="Tar the documentation">
+    <echo message="Tarring the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.docs}.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-${package.docs}.tar.gz" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.docs}.tar.gz" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the source and documentation together -->
+  <target name="tar-src" depends="tar-docs"
+          description="Tar the documentation">
+    <echo message="Tarring the documentation"/>
+    <tar destfile="${dist}/${appName}-src.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the source code and the build files -->
+      <tarfileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-src.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-src.tar.gz" forceOverwrite="true" 
+              algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary stand-alone distribution with the documentation -->
+  <target name="tar-bin-stand-alone" depends="package-stand-alone,tar-docs" 
+          description="Tar the binary stand-alone distribution 
+                       with the documentation">
+    <echo message="Tarring the binary stand-alone distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" 
+         compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the binary JAR files -->
+      <tarfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </tarfileset>
+      <tarfileset dir=".">
+        <include name="${mysql.jar}"/>
+      </tarfileset>    </tar> 
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.stand-alone}-bin.tar.gz" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary web distribution with the documentation -->
+  <target name="tar-bin-web" depends="package-web,tar-docs" 
+          description="Tar the binary web distribution with the documentation">
+    <echo message="Tarring the binary web distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-${package.web}-bin.tar.gz" 
+         compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the binary WAR files -->
+      <tarfileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </tarfileset>
+    </tar> 
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary distribution with the documentation -->
+  <target name="tar-bin" depends="tar-bin-stand-alone,tar-bin-web" 
+          description="Tar the binary distribution with the documentation">
+    <echo message="Tarring the binary distribution with the documentation"/>
+    <tar destfile="${dist}/${appName}-bin.tar.gz" compression="gzip">
+      <!-- Include the documentation -->
+      <tarfileset dir="${docs.all.dir}">
+        <patternset refid="docs.all"/>
+      </tarfileset>
+      <!-- Include the license and the README -->
+      <tarfileset dir="${docs.misc.dir}">
+        <patternset refid="docs.misc"/>
+      </tarfileset>
+      <!-- Include the source code and the build files -->
+      <tarfileset dir="${src.files.dir}">
+        <patternset refid="src.files"/>
+      </tarfileset>
+      <!-- Include the binary JAR files -->
+      <tarfileset dir="${dist}" prefix="lib">
+        <patternset refid="bin.jar"/>
+      </tarfileset>
+      <tarfileset dir=".">
+        <include name="${mysql.jar}"/>
+      </tarfileset>
+      <!-- Include the binary WAR files -->
+      <tarfileset dir="${dist}">
+        <patternset refid="bin.war"/>
+      </tarfileset>
+    </tar>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true" 
+              algorithm="SHA1"/>
+  </target>
+
+  <!-- ################################################### -->
+  <!-- Tasks that use the zip files to construct tar files -->
+  <!-- ################################################### --> 
+
+  <!-- Tar the binary web distribution with the documentation -->
+  <target name="tar-bin-web-new" depends="package-web,tar-docs,zip-bin-web" 
+          description="Tar the binary web distribution with the documentation">
+    <echo message="Tarring the binary web distribution with the documentation"/>
+    <unzip src="${dist}/${appName}-${package.web}-bin.zip" dest="${tmp}/web"/>
+    <tar destfile="${dist}/${appName}-${package.web}-bin.tar.gz" 
+         compression="gzip">
+      <tarfileset dir="${tmp}/web"/>
+    </tar>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" 
+              forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-${package.web}-bin.tar.gz" 
+              forceOverwrite="true" algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary distribution with the documentation -->
+  <target name="tar-bin-new" 
+          depends="zip-bin,tar-bin-stand-alone,tar-bin-web-new"
+          description="Tar the binary distribution with the documentation">
+    <echo message="Tarring the binary distribution with the documentation"/>
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${tmp}" includes="**"/>
+    </delete>
+    <unzip src="${dist}/${appName}-bin.zip" dest="${tmp}"/>
+    <tar destfile="${dist}/${appName}-bin.tar.gz" compression="gzip">
+      <tarfileset dir="${tmp}"/>
+    </tar>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true"/>
+    <checksum file="${dist}/${appName}-bin.tar.gz" forceOverwrite="true" 
+              algorithm="SHA1"/>
+  </target>
+
+  <!-- Tar the binary and source distributions -->
+  <target name="tar-all" depends="tar-src,tar-bin" 
+          description="Tar the binary and source distributions">
+    <echo message="Tarred the binary and source distributions"/>
+  </target>
+
+  <!-- #################### -->
+  <!-- Distribution targets -->
+  <!-- #################### -->
+
+  <!-- ################### -->
+  <!-- FTP targets         -->
+  <!-- ################### -->
+
+  <!-- Place the documentation on FTP -->
+<!--
+  <target name="ftp-docs" depends="zip-docs,tar-docs" 
+          description="Place the documentation on FTP">
+    <echo message="Placing the documentation on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.src.dir}"
+         action="send">
+      <fileset dir="${dist}">
+        <include name="${appName}-${package.docs}.*"/>
+      </fileset>
+    </ftp>
+  </target>
+-->
+
+  <!-- Place the documentation on FTP -->
+  <target name="ftp-docs" depends="zip-docs,tar-docs" 
+          description="Place the documentation on FTP">
+    <echo message="Placing the documentation on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.src.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}-${package.docs}.*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place the source code on FTP -->
+  <target name="ftp-src" depends="zip-src,tar-src" 
+          description="Place the source code on FTP">
+    <echo message="Placing the source code on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.src.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}-src.*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place the binaries on FTP -->
+  <target name="ftp-bin" depends="zip-bin,tar-bin" 
+          description="Place the binaries on FTP">
+    <echo message="Placing the binaries on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.bin.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}*bin*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place everything on FTP -->
+  <target name="ftp" description="Place everything on FTP">
+    <echo message="Placing everything on FTP"/>
+    <antcall target="ftp-docs"/>
+    <antcall target="ftp-src"/>
+    <antcall target="ftp-bin"/>
+  </target>
+
+  <!-- Place everything on FTP -->
+<!--
+  <target name="ftp" description="Place everything on FTP">
+    <echo message="Placing everything on FTP"/>
+    <input message="Please enter your username." addproperty="ftp.user"/>
+    <input message="Please enter your password." addproperty="ftp.password"/>
+    <splash showduration="0"/>
+    <antcall target="ftp-docs"/>
+    <antcall target="ftp-src"/>
+    <antcall target="ftp-bin"/>
+  </target>
+-->
+
+  <!-- ################### -->
+  <!-- Email targets       -->
+  <!-- ################### -->
+
+  <!-- E-mail the documentation -->
+  <target name="email-docs" depends="zip-docs,tar-docs" 
+          description="E-mailing the documentation">
+    <echo message="E-mailing the documentation"/>
+    <mail from="${mail.from}"
+          tolist="${mail.tolist}"
+          mailhost="${mail.mailhost}"
+          user="${mail.user}"
+          password="${mail.password}"
+          subject="${mail.subject}">
+      <message>
+        ${mail.message.docs}
+      </message>
+      <fileset dir="${dist}">
+        <include name="${appName}-${package.docs}.*"/>
+      </fileset>
+    </mail>
+  </target>
+
+  <!-- ################################ -->
+  <!-- Deploy the web application       -->
+  <!-- ################################ -->
+
+  <!-- 1. Copy the expanded web application -->
+  <target name="deploy-copy-files" depends="copy-web,start-tomcat" 
+          description="Deploy the application by copying it to Tomcat">
+    <echo message="Copying the expanded web application to CATALINA_HOME"/>
+    <property environment="env"/>
+    <copy todir="${build.web.web-inf}" file="${src.web.conf}/web.xml"/>
+    <copy todir="${env.CATALINA_HOME}/webapps/${appName}">
+      <fileset dir="${build.web.root}"/>
+    </copy>
+  </target>
+
+  <!-- 2. Copy the WAR -->
+  <target name="deploy-copy-war" depends="package-web,start-tomcat" 
+          description="Deploy the WAR by copying it to Tomcat">
+    <echo message="Copying the WAR to CATALINA_HOME"/>
+    <property environment="env"/>
+    <copy file="${appName.war}" todir="${env.CATALINA_HOME}/webapps"/>
+  </target>
+
+  <!-- 3. Deploy the web application using a context XML file -->
+  <target name="deploy-context" depends="copy-web,start-tomcat" 
+          description="Deploy the web application using a context XML file">
+    <echo message="Deploying the web application using a context XML file"/>
+    <property environment="env"/>
+    <copy todir="${build.web.web-inf}" file="${src.web.conf}/web.xml"/>
+    <copy todir="${env.CATALINA_HOME}/conf/Catalina/localhost" 
+          file="${src.web.conf}/${appName}.xml"/>
+  </target>
+
+  <!-- The deploy task for web applications on Tomcat -->
+  <taskdef name="deploy" classname="org.apache.catalina.ant.DeployTask"/>
+
+  <!-- 4. Deploy the WAR using the manager application -->
+  <target name="deploy" depends="package-web,start-tomcat" 
+          description="Hot deploy the application">
+    <echo message="Deploying the WAR to Tomcat"/>
+    <deploy url="${manager.url}"
+            username="${manager.user}"
+            password="${manager.password}"  
+            path="/${appName}"
+            war="file:${appName.war}"
+            update="true"/>
+  </target>
+
+  <!-- The undeploy task for web applications on Tomcat -->
+  <taskdef name="undeploy" classname="org.apache.catalina.ant.UndeployTask"/>
+
+  <!-- Undeploy the web application -->
+  <target name="undeploy" description="Undeploy the application">
+    <echo message="Undeploying the WAR"/>
+    <undeploy url="${manager.url}"
+              username="${manager.user}"   
+              password="${manager.password}"
+              path="/${appName}"/>
+  </target>
+
+  <!-- #################################### -->
+  <!-- Targets that set up the environment -->
+  <!-- #################################### -->
+
+  <!-- Prepare the database by creating it and inserting data -->
+  <target name="database" 
+          description="Prepare the database by creating it and inserting data">
+    <echo message="Preparing the database by creating it and inserting data"/>
+
+    <property file="${database.properties}"/>
+
+    <sql driver="${driver.name}"
+         url="${database.root}"
+         userid="${database.user}"
+         password="${database.password}">
+      <classpath refid="build.classpath"/>
+      <transaction src="${src.shared.conf}/${drop.sql}"/>
+      <transaction src="${src.shared.conf}/${create.sql}"/>
+      <transaction src="${src.shared.conf}/${insert.sql}"/>
+    </sql>
+  </target>
+
+  <!-- Set the argument defaults -->
+  <!-- The Java execution and the script use them -->
+  <target name="set-argument-defaults" depends="package-stand-alone" 
+          description="Set the defaults for the command-line arguments">
+    <echo message="Setting the defaults for the command-line arguments"/>
+
+    <!-- Set a default for the first argument -->
+    <condition property="arg0" value="">
+      <not>
+        <isset property="${arg0}"/>
+      </not>
+    </condition>
+
+    <!-- Set a default for the second argument -->
+    <condition property="arg1" value="">
+      <not>
+        <isset property="${arg1}"/>
+      </not>
+    </condition>
+  </target>
+
+  <!-- This first target is a Java invocation -->
+  <target name="run-stand-alone-java" depends="set-argument-defaults" 
+          description="Run the stand-alone application">
+    <echo message="Running the stand-alone application"/>
+
+    <!-- We want to make a file for each set of results -->
+    <property name="results.file" value="results.txt"/>
+    <!-- The time stamp will uniquely identify the file -->
+    <tstamp/>
+
+    <java classname="org.mwrm.plants.client.PlantClient">
+      <arg value="${arg0}"/>
+      <arg value="${arg1}"/>
+      <classpath refid="build.classpath"/>
+      <redirector output="${DSTAMP}-${TSTAMP}-${results.file}"/>
+    </java>
+  </target>
+
+  <!-- Check whether Tomcat is running -->
+  <target name="check-port" description="Check whether Tomcat is running">
+    <echo message="Checking whether Tomcat is running"/>
+    <condition property="tomcat.running">
+      <socket server="${tomcat.host}" port="${tomcat.port}"/> 
+    </condition>
+  </target>
+
+  <!-- Start Tomcat if it isn't running -->
+  <target name="start-tomcat" depends="check-port" 
+          description="Start Tomcat if it isn't running" unless="tomcat.running">
+    <echo message="Starting Tomcat"/>
+
+    <property environment="env"/>
+
+    <exec executable="${env.CATALINA_HOME}/bin/${tomcat.executableName}" 
+          spawn="true" vmlauncher="false"/>
+    <sleep seconds="15"/>
+
+    <!-- Set the executable property according to OS -->
+<!--
+    <condition property="executable" value="${tomcat.executableName}.bat">
+      <os family="windows"/>
+    </condition>
+
+    <condition property="executable" value="${tomcat.executableName}.sh">
+      <os family="unix"/>
+    </condition>
+
+    <property environment="env"/>
+
+    <exec executable="${env.CATALINA_HOME}/bin/${executable}" spawn="true"/>
+-->
+  </target>
+
+  <target name="clean" description="Clean up the working directories">
+    <echo message="Cleaning up"/>
+    <delete dir="${build}"/>
+  </target>
+
+</project>

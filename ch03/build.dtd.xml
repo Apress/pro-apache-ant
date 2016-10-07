@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<project name="Apache Ant Book Project" 
+         basedir="."
+         default="build-dtd">
+  
+  <description>
+    Apache Ant book example project. The main targets are listed below.
+  </description>
+
+  <target name="build-dtd" description="Create an Ant DTD">
+    <antstructure output="./project.dtd"/>
+  </target>
+
+</project>

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+
+<project name="JSTL Build" default="build-jstl" basedir=".">
+
+  <!-- ################################### -->
+  <!-- CVS properties                      --> 
+  <!-- ################################### -->
+
+  <!-- CVSROOT for the JSTL -->
+  <property name="cvsroot" 
+            value=":pserver:anoncvs@cvs.apache.org:/home/cvspublic" />
+
+  <!-- #################################################### -->
+  <!-- CVS and build tasks for the JSTL and MySQL connector -->
+  <!-- #################################################### -->
+
+  <!-- Update or check out required sources from CVS for the JSTL -->
+  <target name="checkout-jstl" 
+          description="Update or check out required sources from CVS 
+                       for the JSTL">
+
+    <echo message="Checking out the required JSTL sources from CVS"/>
+
+    <cvs cvsroot="${cvsroot}" quiet="true"
+         command="checkout -P ${jstl.build}" 
+         dest="${build}" compression="true" />
+
+  </target>
+
+  <!-- Build the JSTL from source -->
+  <target name="build-jstl" depends="checkout-jstl" 
+          description="Build the JSTL from source">
+    <echo message="Building the JSTL from source"/>
+
+    <ant antfile="build.xml" dir="${build}/${jstl.build}"/>
+
+    <copy todir="${lib}">
+      <fileset dir="${build}/${jstl.build}/${build}/lib">
+        <include name="*.jar"/>
+      </fileset>
+    </copy>
+  </target>
+
+</project >

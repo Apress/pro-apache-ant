@@ -1,0 +1,297 @@
+<?xml version="1.0"?>
+
+<project name="Testing Build" default="test-all" basedir=".">
+
+  <!-- ################################### -->
+  <!-- Testing targets                     --> 
+  <!-- ################################### -->
+
+  <!-- Prepare the test directories -->
+  <target name="test-init" description="Prepare the test directories">
+    <echo message="Preparing the test directories"/>
+    <delete dir="${test.junit.reports}"/>
+    <delete dir="${test.junit.data}"/>
+    <delete dir="${test.checkstyle.reports}"/>
+    <delete dir="${test.checkstyle.data}"/>
+    <mkdir dir="${test.build}"/>
+    <mkdir dir="${test.junit.reports}"/>
+    <mkdir dir="${test.junit.data}"/>
+    <mkdir dir="${test.checkstyle.reports}"/>
+    <mkdir dir="${test.checkstyle.data}"/>
+  </target>
+
+  <!-- Compile the test classes -->
+  <target name="compile-tests" depends="test-init" description="Compile the test classes">
+    <echo message="Compiling the test classes"/>
+    <javac destdir="${test.build}"
+           srcdir="${test.src}">
+      <classpath refid="test.classpath"/>
+    </javac>
+<!--
+    <jar destfile="${appName-test.jar}" basedir="${test.build}"/>
+-->
+  </target>
+
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit>
+      <classpath refid="test.classpath"/>
+      <test name="org.mwrm.plants.PlantWebTest"/>
+    </junit>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit haltonfailure="true" printsummary="true">
+      <classpath refid="test.classpath"/>
+      <test name="org.mwrm.plants.PlantWebTest"/>
+    </junit>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit haltonfailure="true" printsummary="false">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <test name="org.mwrm.plants.PlantWebTest"/>
+    </junit>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit haltonfailure="true" printsummary="false">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <test todir="${test.junit.data}" name="org.mwrm.plants.PlantWebTest"/>
+    </junit>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit haltonfailure="true" printsummary="false">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <batchtest todir="${test.junit.data}">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit haltonfailure="true" printsummary="false">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <batchtest todir="${test.junit.data}">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+    
+    <junitreport todir="${test.junit.data}">
+      <fileset dir="${test.junit.data}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.junit.reports}"/>
+    </junitreport>
+  </target>
+-->
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit printsummary="false" 
+           errorProperty="test.failed"
+           failureProperty="test.failed">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <batchtest todir="${test.junit.data}">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+    
+    <junitreport todir="${test.junit.data}">
+      <fileset dir="${test.junit.data}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.junit.reports}"/>
+    </junitreport>
+
+    <fail message="One or more tests failed. 
+                   Check the reports in ${basedir}/${test.junit.reports}/index.html." 
+          if="test.failed"/>
+  </target>
+-->
+<!-- 
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit printsummary="false" 
+           errorProperty="test.failed"
+           failureProperty="test.failed">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <batchtest todir="${test.junit.data}">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+    
+    <junitreport todir="${test.junit.data}">
+      <fileset dir="${test.junit.data}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.junit.reports}" styledir="${test.junit.style}"/>
+    </junitreport>
+
+    <fail message="One or more tests failed. 
+                   Check the reports in ${basedir}/${test.junit.reports}/index.html." 
+          if="test.failed"/>
+  </target>
+-->
+
+<!--
+  <target name="test" depends="compile-tests" description="Test the application">
+    <echo message="Testing the application"/>
+    <junit printsummary="false" 
+           errorProperty="test.failed"
+           failureProperty="test.failed">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <test if="test.class" name="${test.class}" todir="${test.junit.data}"/>
+      <batchtest unless="test.class" todir="${test.junit.data}">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+    
+    <junitreport todir="${test.junit.data}">
+      <fileset dir="${test.junit.data}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.junit.reports}"/>
+    </junitreport>
+
+    <fail message="One or more tests failed. 
+                   Check the reports in ${basedir}/${test.junit.reports}/index.html." 
+          if="test.failed"/>
+  </target>
+-->
+
+  <!-- Check whether the tests should run -->
+  <target name="check-tests" depends="test-init" description="Check whether the tests should run">
+    <echo message="Checking whether the tests should run"/>
+
+    <fileset id="shared-check" dir="${src.shared.root}" excludes="docs/**,**/*.sql,**/package.html"/>
+
+    <condition property="tests.notRequired">
+
+      <and>
+
+        <uptodate targetfile="${appName.jar}">
+          <srcfiles refid="shared-check"/>
+        </uptodate>
+ 
+        <uptodate targetfile="${appName.jar}">
+          <srcfiles dir="${src.stand-alone.java}" includes="**/*.java"/>
+        </uptodate>
+
+        <uptodate targetfile="${appName.war}">
+          <srcfiles refid="shared-check"/>
+        </uptodate>
+
+        <uptodate targetfile="${appName.war}">
+          <srcfiles dir="${src.web.root}" excludes="docs/**,**/${appName}.xml,**/package.html"/>
+        </uptodate>
+
+        <uptodate>
+          <srcfiles dir="${test.src}" includes="**/*.java"/>
+          <globmapper from="*.java" to="${basedir}/${test.build}/*.class"/>
+        </uptodate>
+
+        <!-- If we're using a JAR file for the tests, use this check instead of the above 
+        <uptodate targetfile="${appName-test.jar}">
+          <srcfiles dir="${test.src}" includes="**/*.java"/>
+        </uptodate>
+        -->
+
+        <not>
+          <available file="${last.test.failed.file}"/>
+        </not>
+
+        <not>
+          <isset property="test.class"/>
+        </not>
+      </and>
+
+    </condition>
+  </target>
+
+  <!-- Test the application -->
+  <target name="test" depends="check-tests,compile-tests" unless="tests.notRequired" description="Test the application">
+    <echo message="Testing the application"/>
+
+<!--
+    <zipfileset id="zipset" src="${appName-test.jar}" includes="**/*Test.class" />
+-->
+
+    <junit printsummary="false" 
+           errorProperty="test.failed"
+           failureProperty="test.failed">
+      <classpath refid="test.classpath"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="xml"/>
+      <test name="${test.class}" todir="${test.junit.data}" if="test.class"/>
+      <batchtest todir="${test.junit.data}" unless="test.class">
+        <fileset dir="${test.build}" includes="**/*Test.class"/>
+      </batchtest>
+    </junit>
+    
+    <junitreport todir="${test.junit.data}">
+      <fileset dir="${test.junit.data}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test.junit.reports}"/>
+    </junitreport>
+
+    <echo message="The last test run failed."
+          file="${last.test.failed.file}"/>
+
+    <fail message="One or more tests failed. 
+                   Check the reports in ${basedir}/${test.junit.reports}/index.html." 
+          if="test.failed"/>
+
+    <delete file="${last.test.failed.file}"/>
+  </target>
+
+  <!-- Check the coding conventions -->
+  <target name="coding-style" depends="test-init" description="Check the coding conventions">
+    <echo message="Checking the coding conventions"/>
+    <taskdef resource="checkstyletask.properties"/>
+    <checkstyle config="${checkstyle.home}/sun_checks.xml" failOnViolation="false" failureProperty="checkstyle.failed">
+      <classpath refid="build.classpath"/>
+      <formatter type="xml" tofile="${test.checkstyle.data}/checkstyle_report.xml"/>
+      <fileset refid="javadoc"/>
+      <fileset dir="${test.src}"/>
+      <fileset dir="${ant.tasks.src}"/>
+    </checkstyle>
+    <xslt in="${test.checkstyle.data}/checkstyle_report.xml" out="${test.checkstyle.reports}/checkstyle_report.html" 
+          style="${checkstyle.home}/contrib/checkstyle-frames.xsl"/>
+
+    <fail message="One or more Checkstyle checks failed. Check the reports in ${basedir}/${test.checkstyle.reports}" 
+          if="checkstyle.failed"/>
+  </target>
+
+  <!-- Run all the tests -->
+  <target name="test-all" depends="test,coding-style" description="Run all the tests">
+    <echo message="All the tests have finished"/>
+  </target>
+
+</project>

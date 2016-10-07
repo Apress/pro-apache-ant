@@ -1,0 +1,150 @@
+<?xml version="1.0"?>
+<project name="Apache Ant Book Project" 
+         basedir="."/>
+
+  <patternset id="src.files">
+    <include name="${src}/**"/>
+    <include name="build.*"/>
+  </patternset>
+
+  <patternset id="pattern.id.one.star">
+    <include name="lib/*"/>   
+  </patternset>
+
+  <patternset id="pattern.id.two.star">
+    <include name="lib/**"/>   
+  </patternset>
+
+  <dirset dir="." id="explicit">
+    <patternset>
+      <include name="lib/**"/>
+    </patternset>
+  </dirset>
+  <dirset dir="." id="implicit">
+    <include name="lib/**"/>
+  </dirset>
+
+  <fileset dir="." defaultexcludes="no">
+    <include name="lib/java/*.java?"/>
+  </fileset>
+
+  <fileset dir=".">
+    <selector if="two.stars">
+      <filename name="lib/**"/>
+    </selector>
+  </fileset>
+
+  <fileset dir=".">
+    <selector if="two.stars">
+      <filename name="lib/**"/>
+    </selector>
+  </fileset>
+
+  <fileset id="javadoc" dir="${src}">
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+    <contains text="Licensed under the Apache License"/>
+  </fileset>  
+
+  <fileset dir="${src.shared}/docs">
+    <include name="*.html"/>
+    <date datetime="01/02/2005" pattern="DD/MM/YYYY"/>
+  </fileset>
+
+  <fileset id="javadoc" dir="${src}">
+    <exclude name="*/conf/**"/>
+    <exclude name="*/docs/*"/>
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+    <depend targetdir="${docs}/api"/>
+  </fileset>  
+
+  <fileset dir="${docs.all.dir}">
+    <patternset refid="docs.all"/>
+    <depth max="${user.depth}"/>
+  </fileset>
+
+  <fileset dir="${docs.all.dir}">
+    <patternset refid="docs.all"/>
+    <different targetdir="${docs}/api" ignoreFileTimes="false"/>
+  </fileset>
+
+  <fileset dir="${build}/build-mysql-jdbc">
+    <filename name="mysql-connector*/*.jar" negate="true"/>
+  </fileset>
+
+  <fileset dir="${build}/build-mysql-jdbc">
+    <include name="mysql-connector*/*.jar"/>
+  </fileset>
+
+  <fileset dir="${docs.all.dir}">
+    <patternset refid="docs.all"/>
+    <present targetdir="${docs}/api" present="srconly"/>
+  </fileset>
+
+  <fileset id="javadoc" dir="${src}">
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+    <containsregexp expression="Licensed under the Apache Licen[sc]e"/>
+  </fileset>  
+
+  <fileset dir="${httpunit.home}/jars">
+    <include name="*.jar"/>
+    <exclude name="junit.jar"/>
+    <size value="1" units="Gi" when="less"/>
+  </fileset>
+
+  <modified>
+    <param name="cache.cachefile" value="custom.properties"/>
+    <param name="algorithm.algorithm" value="SHA"/>
+  </modified>
+
+  <fileset dir="${src.web}/pages">
+    <and>
+      <modified>
+        <param name="cache.cachefile" value="custom.properties"/>
+        <param name="algorithm.algorithm" value="SHA"/>
+      </modified>
+      <type type="file"/>
+    </and>
+  </fileset>
+
+  <fileset id="javadoc" dir="${src}">
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+    <or>
+      <containsregexp expression="Licensed under the Apache Licen[sc]e"/>
+      <containsregexp expression="GNU GENERAL PUBLIC LICEN[SC]E"/>
+    </or>
+  </fileset>
+
+  <fileset id="javadoc" dir="${src}">
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+    <none>
+      <containsregexp expression="Licensed under the Apache Licen[sc]e"/>
+      <containsregexp expression="GNU GENERAL PUBLIC LICEN[SC]E"/>
+    </none>
+  </fileset>
+
+  <classfileset id="zip.classes.id" dir="${build.stand-alone}">
+    <root classname="org.mwrm.client.Client"/>
+  </classfileset>
+
+  <classfileset id="zip.classes.id" dir="${build.stand-alone}">
+    <rootfileset dir="${build.stand-alone}" 
+                 includes="org/mwrm/**/*.class"/>
+  </classfileset>
+
+  <filelist dir="lib/java" files="One.java"/>
+     
+  <filelist dir="lib/java">
+    <file name="One.java"/>
+  </filelist>
+
+</project>

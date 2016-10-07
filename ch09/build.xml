@@ -1,0 +1,550 @@
+<?xml version="1.0"?>
+
+<project name="Example Application Build" default="build-both" basedir=".">
+
+  <property file="build.properties"/>
+
+  <!-- ################################### -->
+  <!-- The master build classpath          --> 
+  <!-- ################################### -->
+
+  <path id="build.classpath">
+    <pathelement location="${servlet24.jar}"/>
+    <pathelement location="${jsp20.jar}"/>
+    <pathelement location="${mysql.jar}"/>
+    <pathelement path="${appName.jar}"/>
+  </path>
+
+  <!-- ################################### -->
+  <!-- The test build classpath            --> 
+  <!-- ################################### -->
+
+  <path id="test.classpath">
+    <path refid="build.classpath"/>
+    <fileset dir="${httpunit.home}/jars">
+      <include name="*.jar"/>
+      <exclude name="junit.jar"/>
+    </fileset>
+    <pathelement location="${junit.jar}"/>
+    <pathelement location="${httpunit.jar}"/>
+    <pathelement location="${checkstyle.jar}"/>
+    <pathelement location="${test.build}"/>
+  </path>
+
+  <!-- ################################### -->
+  <!-- Javadoc file sets                   --> 
+  <!-- ################################### -->
+
+  <fileset id="javadoc" dir="${src}">
+    <exclude name="*/conf/**"/>
+    <exclude name="*/docs/*"/>
+<!-- Add to the CE check of 6 -->
+    <exclude name="**/package.html"/>
+    <exclude name="**/*.xml"/>
+    <include name="shared/**"/>
+    <include name="stand-alone/**"/>
+    <include name="web/java/**"/>
+  </fileset>  
+
+  <!-- ##################################################### -->
+  <!-- Properties and pattern sets for the packaging targets --> 
+  <!-- ##################################################### -->
+
+  <!-- The value of each property in this section is the setting -->
+  <!-- for the 'dir' attribute of file sets and tar file sets --> 
+
+  <!-- Property and pattern set for the documentation -->
+  <property name="docs.all.dir" value="${build}"/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="docs.all">
+    <include name="docs/**"/>
+  </patternset>
+
+  <!-- Property and pattern set for the license and README -->
+  <property name="docs.misc.dir" value="${src.shared.docs}"/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="docs.misc">
+    <include name="README"/>
+    <include name="LICENSE"/>
+  </patternset>
+  
+  <!-- Property and pattern set for the source, -->
+  <!-- build.xml, and build.properties -->
+  <property name="src.files.dir" value="."/>
+  <!-- Tar file sets cannot use file sets, so we must use a pattern set -->
+  <patternset id="src.files">
+    <include name="${src}/**"/>
+    <include name="build.*"/>
+  </patternset>
+
+  <!-- Pattern set for the binary JAR -->
+  <!-- Nothing else is needed because the directory that contains it -->
+  <!-- is already in the ${dist} property and it's used in a zip file set -->
+  <!-- as well as a tar file set --> 
+  <patternset id="bin.jar">
+    <include name="*.jar"/>
+  </patternset>
+
+  <!-- Pattern set for the binary WAR -->
+  <!-- Nothing else is needed because the directory that contains it -->
+  <!-- is already in the ${dist} property and it's used in a zip file set -->
+  <!-- as well as a tar file set --> 
+  <patternset id="bin.war">
+    <include name="*.war"/>
+  </patternset>
+
+  <!-- ################################### -->
+  <!-- Task definitions                    --> 
+  <!-- ################################### -->
+
+  <!-- The deploy task for web applications on Tomcat -->
+  <taskdef name="deploy" classname="org.apache.catalina.ant.DeployTask"/> 
+
+  <!-- The undeploy task for web applications on Tomcat -->
+  <taskdef name="undeploy" classname="org.apache.catalina.ant.UndeployTask"/>
+
+  <!-- ################################### -->
+  <!-- Initialization target               --> 
+  <!-- ################################### -->
+
+  <!-- Create the working directories -->
+  <target name="dir" description="Create the working directories">
+    <echo message="Creating the working directories"/>
+    <mkdir dir="${build.stand-alone.root}"/>
+    <mkdir dir="${build.web.classes}"/>
+    <mkdir dir="${dist}"/>
+    <mkdir dir="${lib}"/>
+  </target>
+
+  <!-- ######################## -->
+  <!-- Download the servlet JAR -->
+  <!-- ######################## -->
+  
+  <!-- Download the servlet JAR -->
+  <target name="download-servlet-jar" depends="dir" description="Download the servlet JAR">
+    <echo message="Downloading the servlet JAR"/>
+
+    <get src="http://www.ibiblio.org/maven/servletapi/jars/servletapi-2.4.jar"
+         dest="${servlet24.jar}"
+         verbose="true"/>
+  </target>
+
+  <!-- ########################### -->
+  <!-- The stand-alone application -->
+  <!-- ########################### -->
+
+  <!-- Compile the stand-alone application -->
+  <target name="package-stand-alone" depends="dir" description="Compile stand-alone application">
+    <echo message="Compiling the stand-alone application"/>
+    <!-- First let's compile the shared code -->
+    <property name="destination" value="${build.stand-alone.root}"/>
+    <ant antfile="${build.shared.xml}" inheritRefs="true"/>
+    <ant antfile="${build.stand-alone.xml}" inheritRefs="true"/>
+  </target>
+
+  <target name="stand-alone-complete" depends="dir" description="Compile stand-alone application, using CVS version of the MySQL connector">
+    <echo message="Compiling stand-alone application, using CVS versions of the MySQL connector"/>
+    <ant antfile="${build.mysql.xml}" inheritRefs="true"/>
+    <antcall target="package-stand-alone"/>
+  </target>
+
+  <!-- Run the stand-alone application -->
+
+  <!-- First set the argument defaults -->
+  <!-- The Java execution and the script use them depends="stand-alone" -->
+  <target name="set-argument-defaults" 
+          description="Set the defaults for the command-line arguments">
+    <echo message="Setting the defaults for the command-line arguments"/>
+
+    <!-- Set a default for the first argument -->
+    <condition property="arg0" value="">
+      <not>
+        <isset property="${arg0}"/>
+      </not>
+    </condition>
+
+    <!-- Set a default for the second argument -->
+    <condition property="arg1" value="">
+      <not>
+        <isset property="${arg1}"/>
+      </not>
+    </condition>
+  </target>
+
+  <!-- This first target is a Java invocation -->
+  <target name="run-stand-alone-java" depends="set-argument-defaults, package-stand-alone" description="Run the stand-alone application">
+    <echo message="Running the stand-alone application"/>
+
+    <!-- We want to make a file for each set of results -->
+    <property name="results.file" value="results.txt"/>
+    <!-- The time stamp will uniquely identify the file -->
+    <tstamp>
+      <format property="TSTAMP" pattern="HHmm"/>
+    </tstamp>
+
+    <java classname="org.mwrm.plants.client.PlantClient">
+      <arg value="${arg0}"/>
+      <arg value="${arg1}"/>
+      <classpath refid="build.classpath"/>
+      <redirector output="${DSTAMP}-${TSTAMP}-${results.file}"/>
+    </java>
+  </target>
+
+  <!-- ########################### -->
+  <!-- The web application         -->
+  <!-- ########################### -->
+
+  <!-- Build the WAR file in one step -->
+  <target name="package-web" depends="dir" description="Build the WAR file in one step">
+    <echo message="Building the WAR file in one step"/> 
+    <!-- First let's compile the shared code -->
+    <property name="destination" value="${build.stand-alone.root}"/>
+    <ant antfile="${build.shared.xml}" inheritRefs="true"/>
+    <ant antfile="${build.web.xml}" inheritRefs="true"/>
+  </target> 
+
+  <target name="web-complete" description="Compile web application, using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled web application, using CVS versions of the MySQL connector and the JSTL"/>
+    <ant antfile="${build.mysql.xml}" inheritRefs="true"/>
+    <ant antfile="${build.jstl.xml}" inheritRefs="true"/>
+    <antcall target="package-web"/>
+  </target>
+
+  <!-- Check whether Tomcat is running -->
+  <target name="check-port" description="Check whether Tomcat is running">
+    <echo message="Checking whether Tomcat is running"/>
+    <condition property="tomcat.running">
+      <socket server="${tomcat.host}" port="${tomcat.port}"/> 
+    </condition>
+  </target>
+
+  <!-- Start Tomcat if it isn't running -->
+  <target name="start-tomcat" depends="check-port" description="Start Tomcat if it isn't running" unless="tomcat.running">
+    <echo message="Starting Tomcat"/>
+    <property environment="env"/>
+    <exec executable="${env.CATALINA_HOME}/bin/${tomcat.executableName}" spawn="true" vmlauncher="false"/>
+    <sleep seconds="10"/>
+  </target>
+
+  <!-- Start Tomcat if it isn't running -->
+<!--
+  <target name="start-tomcat" depends="check-port" 
+          description="Start Tomcat if it isn't running" unless="tomcat.running">
+    <echo message="Starting Tomcat"/>
+-->
+    <!-- Set the executable property according to OS -->
+<!--
+    <condition property="executable" value="${tomcat.executableName}.bat">
+      <os family="windows"/>
+    </condition>
+
+    <condition property="executable" value="${tomcat.executableName}.sh">
+      <os family="unix"/>
+    </condition>
+
+    <property environment="env"/>
+
+    <exec executable="${env.CATALINA_HOME}/bin/${executable}" spawn="true"/>
+    <sleep seconds="15"/>
+  </target >
+-->
+
+  <!-- ######################################## -->
+  <!-- Targets that work with both applications -->
+  <!-- ######################################## -->
+
+  <target name="build-both" depends="package-stand-alone, package-web" description="Compile both applications, without CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, without CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <target name="build-all" depends="stand-alone-complete, web-complete" description="Compile both applications, using CVS versions of the MySQL connector and the JSTL">
+    <echo message="Compiled both applications, using CVS versions of the MySQL connector and the JSTL"/>
+  </target>
+
+  <target name="clean" description="Clean up the working directories">
+    <echo message="Cleaning up"/>
+    <delete dir="${build}"/>
+  </target>
+
+  <!-- Zip the binary and source distributions -->
+  <target name="zip-all" depends="package-stand-alone, package-web"
+          description="Zip the binary and source distributions">
+    <echo message="Zipping the binary and source distributions"/>
+    <ant antfile="${build.package.xml}" target="zip-all" inheritRefs="true"/>
+  </target>
+
+  <!-- Tar the binary and source distributions -->
+  <target name="tar-all" depends="package-stand-alone, package-web"
+          description="Tar the binary and source distributions">
+    <echo message="Tarring the binary and source distributions"/>
+    <ant antfile="${build.package.xml}" target="tar-all" inheritRefs="true"/>
+  </target>
+
+  <!-- Create all the packages -->
+  <target name="package-all" depends="package-stand-alone, package-web" description="Create all the packages">
+    <echo message="Creating all the packages"/>
+    <ant antfile="${build.package.xml}" inheritRefs="true"/>
+  </target>
+
+  <!-- #################### -->
+  <!-- Distribution targets -->
+  <!-- #################### -->
+
+  <!-- ################### -->
+  <!-- FTP targets         -->
+  <!-- ################### -->
+
+  <!-- Place the documentation on FTP -->
+  <target name="ftp-docs" depends="package-all" description="Place the documentation on FTP">
+    <echo message="Placing the documentation on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.src.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}-${package.docs}.*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place the source code on FTP -->
+  <target name="ftp-src" depends="package-all" description="Place the source code on FTP">
+    <echo message="Placing the source code on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.src.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}-src.*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place the binaries on FTP -->
+  <target name="ftp-bin" depends="package-all"
+          description="Place the binaries on FTP">
+    <echo message="Placing the binaries on FTP"/>
+    <ftp server="${ftp.server}"
+         userid="${ftp.user}"
+         password="${ftp.password}"
+         remotedir="${ftp.bin.dir}"
+         action="send"
+         newer="true"
+         timediffauto="true">
+      <fileset dir="${dist}">
+        <include name="${appName}*bin*"/>
+      </fileset>
+    </ftp>
+  </target>
+
+  <!-- Place everything on FTP -->
+  <target name="ftp" description="Place everything on FTP">
+    <echo message="Placing everything on FTP"/>
+    <input message="Please enter your username." addproperty="ftp.user"/>
+    <input message="Please enter your password." addproperty="ftp.password"/>
+    <splash showduration="0"/>
+    <antcall target="ftp-docs"/>
+    <antcall target="ftp-src"/>
+    <antcall target="ftp-bin"/>
+  </target>
+
+  <!-- ################### -->
+  <!-- Email targets       -->
+  <!-- ################### -->
+
+  <!-- Email the documentation -->
+  <target name="email-docs" depends="package-all" description="Email the documentation">
+    <echo message="Emailing the documentation"/>
+    <mail from="${mail.from}"
+          tolist="${mail.tolist}"
+          message="${mail.message.docs}"
+          mailhost="${mail.mailhost}"
+          user="${mail.user}"
+          password="${mail.password}"
+          subject="${mail.subject}">
+      <fileset dir="${dist}">
+        <include name="${appName}-${package.docs}.*"/>
+      </fileset>
+    </mail>
+  </target>
+
+  <!-- Email the source -->
+  <target name="email-src" depends="package-all" description="Email the source">
+    <echo message="Emailing the source"/>
+    <mail from="${mail.from}"
+          tolist="${mail.tolist}"
+          message="${mail.message.src}"
+          mailhost="${mail.mailhost}"
+          user="${mail.user}"
+          password="${mail.password}"
+          subject="${mail.subject}">
+      <fileset dir="${dist}">
+        <include name="${appName}-src.*"/>
+      </fileset>
+    </mail>
+  </target>
+
+  <!-- Email the binaries -->
+  <target name="email-bin" depends="package-all" description="Email the binaries">
+    <echo message="Emailing the binaries"/>
+    <mail from="${mail.from}"
+          tolist="${mail.tolist}"
+          message="${mail.message.bin}"
+          mailhost="${mail.mailhost}"
+          user="${mail.user}"
+          password="${mail.password}"
+          subject="${mail.subject}">
+      <fileset dir="${dist}">
+        <include name="${appName}*bin*"/>
+      </fileset>
+    </mail>
+  </target>
+
+  <!-- Email everything -->
+  <target name="email" description="Email everything">
+    <echo message="Emailing everything"/>
+    <antcall target="email-docs"/>
+    <antcall target="email-src"/>
+    <antcall target="email-bin"/>
+  </target>
+
+  <!-- ################################ -->
+  <!-- Deploy the web application       -->
+  <!-- ################################ -->
+
+  <!-- 1. Copy the expanded web application -->
+<!--
+  <target name="deploy-copy-files" depends="copy-web, start-tomcat" description="Deploy the application by copying it to Tomcat">
+    <echo message="Copying the expanded web application to CATALINA_HOME"/>
+    <property environment="env"/>
+    <copy todir="${build.web.web-inf}" file="${src.web.conf}/web.xml"/>
+    <copy todir="${env.CATALINA_HOME}/webapps/${appName}">
+      <fileset dir="${build.web.root}"/>
+    </copy>
+  </target>
+-->
+
+  <!-- 2. Copy the WAR -->
+  <target name="deploy-copy-war" depends="package-web, start-tomcat" description="Deploy the WAR by copying it to Tomcat">
+    <echo message="Copying the WAR to CATALINA_HOME"/>
+    <property environment="env"/>
+    <copy file="${appName.war}" todir="${env.CATALINA_HOME}/webapps"/>
+  </target>
+
+  <!-- 3. Deploy the web application using a context XML file -->
+<!--
+  <target name="deploy-context" depends="copy-web" 
+          description="Deploy the web application using a context XML file">
+    <echo message="Deploying the web application using a context XML file"/>
+    <property environment="env"/>
+    <copy todir="${build.web.web-inf}" file="${src.web.conf}/web.xml"/>
+    <copy todir="${env.CATALINA_HOME}/conf/Catalina/localhost" 
+          file="${src.web.conf}/${appName}.xml"/>
+  </target>
+-->
+
+  <!-- 4. Deploy the WAR using the manager application -->
+  <target name="deploy" depends="package-web, start-tomcat" description="Hot deploy the application">
+    <echo message="Deploying the WAR to Tomcat"/>
+    <deploy url="${manager.url}"
+            username="${manager.user}"
+            password="${manager.password}"  
+            path="/${appName}"
+            war="file:${appName.war}"
+            update="true"/>
+  </target>
+
+  <!-- Undeploy the web application -->
+  <target name="undeploy" description="Undeploy the application">
+    <echo message="Undeploying the WAR"/>
+    <undeploy url="${manager.url}"
+              username="${manager.user}"   
+              password="${manager.password}"
+              path="/${appName}"/>
+  </target>
+
+  <!-- ################################# -->
+  <!-- Tasks that set up the environment -->
+  <!-- ################################# -->
+
+  <!-- Prepare the database by creating it and inserting data -->
+  <target name="database" 
+          description="Prepare the database by creating it and inserting data">
+    <echo message="Preparing the database by creating it and inserting data"/>
+
+    <property file="${database.properties}"/>
+
+    <sql driver="${driver.name}"
+         url="${database.root}"
+         userid="${database.user}"
+         password="${database.password}">
+      <classpath refid="build.classpath"/>
+      <transaction src="${src.shared.conf}/${drop.sql}"/>
+      <transaction src="${src.shared.conf}/${create.sql}"/>
+      <transaction src="${src.shared.conf}/${insert.sql}"/>
+    </sql>
+  </target>
+
+  <!-- Prepare the database by creating it and inserting data -->
+  <target name="database-drop" 
+          description="Prepare the database by creating it and inserting data">
+    <echo message="Preparing the database by creating it and inserting data"/>
+
+    <property file="${database.properties}"/>
+
+    <sql driver="${driver.name}"
+         url="${database.root}"
+         userid="${database.user}"
+         password="${database.password}">
+      <classpath refid="build.classpath"/>
+      <transaction src="${src.shared.conf}/${drop.sql}"/>
+    </sql>
+  </target>
+
+  <!-- ################################### -->
+  <!-- Testing targets                     --> 
+  <!-- ################################### -->
+
+  <!-- Run the JUnit tests -->
+  <target name="test" depends="package-stand-alone, deploy-copy-war" description="Run the JUnit tests">
+    <echo message="Running the JUnit tests"/>
+    <ant antfile="${build.test.xml}" target="test" inheritRefs="true"/>
+  </target>
+
+  <!-- Check the coding conventions -->
+  <target name="coding-style" description="Check the coding conventions">
+    <echo message="Checking the coding conventions"/>
+    <ant antfile="${build.test.xml}" target="coding-style" inheritRefs="true"/>
+  </target>
+
+  <!-- Run all the tests -->
+  <target name="test-all" depends="package-stand-alone, deploy-copy-war" description="Run all the tests">
+    <echo message="Running all the tests"/>
+    <ant antfile="${build.test.xml}" inheritRefs="true"/>
+  </target>
+
+  <!-- Run the tests -->
+  <target name="test-target" depends="package-stand-alone,deploy-copy-war">
+    <ant antfile="${build.test.xml}" target="${target}" inheritRefs="true"/>    
+  </target>
+
+  <!-- #################### -->
+  <!-- Managing subprojects -->
+  <!-- #################### -->
+
+  <target name="stand-alone-target" depends="dir">
+    <ant antfile="${build.stand-alone.xml}" target="${target}" 
+         inheritRefs="true"/>
+  </target>
+
+  <target name="web-target" depends="dir">
+    <ant antfile="${build.web.xml}" target="${target}" inheritRefs="true"/>
+  </target >
+
+</project>

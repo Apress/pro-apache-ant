@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee
+              http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd" version="2.4">
+
+  <description>
+    A plant application.
+  </description>
+
+  <context-param>
+    <param-name>resultsPerPage</param-name>
+    <param-value>5</param-value>
+    <description>
+      This value sets how many results will be shown per results page.
+    </description>
+  </context-param>
+
+  <!-- Describe a DataSource -->
+  <resource-ref>
+    <description>
+      Resource reference to a factory for java.sql.Connection
+      instances that may be used for talking to a particular
+      database that is configured in the plantBook.xml file.
+    </description>
+    <res-ref-name>
+      jdbc/PlantDB
+    </res-ref-name>
+    <res-type>
+      javax.sql.DataSource
+    </res-type>
+    <res-auth>
+      SERVLET
+    </res-auth>
+  </resource-ref>
+
+  <taglib>
+    <taglib-uri>/plant-taglib</taglib-uri>
+    <taglib-location>/WEB-INF/plant.tld</taglib-location>
+  </taglib>
+
+  <servlet>
+    <servlet-name>plantServlet</servlet-name>
+    <servlet-class>
+      org.mwrm.plants.servlets.PlantServlet
+    </servlet-class>
+
+    <init-param>
+      <description>
+        Print debug information to the console
+      </description>
+      <param-name>
+        debug
+      </param-name>
+      <param-value>
+        true
+      </param-value>
+    </init-param>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>plantServlet</servlet-name>
+    <url-pattern>/plants/listPlants.jsp</url-pattern>
+  </servlet-mapping>
+
+</web-app>
